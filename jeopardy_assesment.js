@@ -1,108 +1,99 @@
+$(document).ready(function () {
+  const url = "http://jservice.io/api";
+  let CATEGORIES = [];
+  let NUM_CATEGORIES = [];
+  let HEIGHT = 5;
+  let WIDTH = 5;
 
-  // categories is the main data structure for the app; it looks like this:
+  function getRandomArbitrary(min, max) {
+    return Math.floor(Math.random() * (max - min) + min);
+  }
 
-//  [
-//    { title: "Math",
-//      clues: [
-//        {question: "2+2", answer: 4, showing: null},
-//        {question: "1+1", answer: 2, showing: null}
-//        ...
-//      ],
-//    },
-//    { title: "Literature",
-//      clues: [
-//        {question: "Hamlet Author", answer: "Shakespeare", showing: null},
-//        {question: "Bell Jar Author", answer: "Plath", showing: null},
-//        ...
-//      ],
-//    },
-//    ...
-//  ]
-
-// ~~~ API GLOBALS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ API GLOBALS ~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-let categories = [];  // holds all the categories and questions
-const BASE_URL = `https://jservice.io/api`;
-const QUESTION_COUNT = 5;
-const CATEGORY_COUNT = 6;
-
-// ~~~ CATEGORIES AND CLUES ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ CATEGORIES AND CLUES ~~~~~~~~~~~~~~~~~~~
-
-class Category {
-  /** Get NUM_CATEGORIES random category from API.
-  * Returns array of category ids
-  */
-  static async getCategoryIds() {
-    let response = await axios.get(`${BASE_URL}/categories`, {
+  async function getCategoryIds() {
+    const response = await axios.get(`${url}/categories`, {
       params: {
-        count: "100",
-        offset: Math.floor(Math.random() * (500 - 1) + 1) // RNG to vary offset between each request
-      }
+        offset: getRandomArbitrary(0, 18500),
+        count: 5,
+      },
     });
 
-    // Lodash selects 6 random categories
-    let randomCategories = _.sampleSize(response.data, CATEGORY_COUNT)
-
-    // make new array with only the category IDs
-    let categoryIds = randomCategories.map((catObj) => {
-      return catObj.id;
-    });
-
-    return categoryIds;
+    NUM_CATEGORIES = response.data.map(category => category.id);
+    return NUM_CATEGORIES;
   }
 
-  // Fill 'categories' array with 6 objects, each with 5 questions
-  static async getAllCategoriesAndQuestions() {
-    categories = [];
-    let categoryIds = await Category.getCategoryIds();
-    for ( let categoryId of categoryIds ) {
-      let fullCategory = await Category.getCategory(categoryId);
-      categories.push(fullCategory);
+  async function getCategory(catIds) {
+    for (const id of catIds) {
+      const response = await axios.get(`${url}/category?id=${id}`);
+      CATEGORIES.push({
+        title: response.data.title,
+        clues: response.data.clues,
+      });
     }
-    return categories;
   }
 
+  async function fillTable() {
+    const table = document.createElement("table");
+    const thead = document.createElement("thead");
+    const tr = document.createElement("tr");
 
-  /** Return object with data about a category:
-   *
-   *  Returns {
-   *    title: "Math",
-   *    clues: clue-array
-   *  }
-   *
-   * Where clue-array is:
-   *   [
-   *      {question: "Hamlet Author", answer: "Shakespeare", showing: null},
-   *      {question: "Bell Jar Author", answer: "Plath", showing: null},
-   *      ...
-   *   ]
-   */
-  static async getCategory(catId) {
-    let response = await axios.get(`${BASE_URL}/clues`, {
-      params: {
-        category: catId
-      }
-    });
-    // Lodash selects 5 random questions
-    let selectFiveQuestions = _.sampleSize(response.data, QUESTION_COUNT);
-
-    // format each question object inside array
-    let questionArray = selectFiveQuestions.map((question) => {
-      //
-      if (question.answer.startsWith('<i>')) {
-        question.answer = question.answer.slice(3, -3);
-      }
-      return {
-        question: question.question,
-        answer: question.answer,
-        showing: null
-      }
-    });
-
-    let categoryQuestions = {
-      title: response.data[0].category.title, // get category title from 'response'
-      clues: questionArray
+    for (let i = 0; i < 5; i++) {
+      const th = document.createElement("th");
+      th.textContent = CATEGORIES[i].title.toUpperCase();
+      tr.appendChild(th);
     }
-    return categoryQuestions;
+
+    thead.appendChild(tr);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+
+    for (let i = 0; i < 5; i++) {
+      const bodyRow = document.createElement("tr");
+      for (let j = 0; j < 5; j++) {
+        const cells = document.createElement("td");
+        cells.setAttribute("id", `${i}-${j}`);
+        cells.setAttribute("class", "cells");
+        cells.innerText = "?";
+        cells.addEventListener("click", handleClick);
+        bodyRow.appendChild(cells);
+      }
+      tbody.appendChild(bodyRow);
+    }
+
+    table.appendChild(tbody);
+    document.body.appendChild(table);
   }
-}
+
+  function handleClick(evt) {
+    const [rowIndex, colIndex] = evt.target.id.split("-");
+     const clue = evt.target.id
+     const cell = document.getElementById(clue)
+     
+    if (cell.textContent === "?") {
+      evt.target.innerText = CATEGORIES[colIndex].clues[rowIndex].question;
+      CATEGORIES[colIndex].clues[rowIndex].showing = "question";
+    } else if (CATEGORIES[colIndex].clues[rowIndex].showing === "question") {
+      evt.target.innerText = CATEGORIES[colIndex].clues[rowIndex].answer;
+      CATEGORIES[colIndex].clues[rowIndex].showing = "answer";
+      
+    }
+    else {
+      return 
+    }
+    } 
+  
+
+  async function setupAndStart() {
+    const result = await getCategoryIds();
+    await getCategory(result);
+    fillTable(result);
+  }
+
+  $("#start").click(function () {
+    console.log("START");
+    setupAndStart();
+  });
+});
+document.getElementById("reset").onclick = function() {
+  document.getElementById("number").value = "";
+};
