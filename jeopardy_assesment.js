@@ -5,6 +5,8 @@ $(document).ready(function () {
   let HEIGHT = 5;
   let WIDTH = 5;
 
+
+
   function getRandomArbitrary(min, max) {
     return Math.floor(Math.random() * (max - min) + min);
   }
@@ -93,7 +95,18 @@ $(document).ready(function () {
     console.log("START");
     setupAndStart();
   });
+
+  $("#reset").click(function () {
+    console.log("RESET");
+    resetGame();
+  });
+
+  function resetGame() {
+    CATEGORIES = [];
+    NUM_CATEGORIES = [];
+    const table = document.querySelector("table");
+    if (table) {
+      table.remove();
+    }
+  }
 });
-document.getElementById("reset").onclick = function() {
-  document.getElementById("number").value = "";
-};
